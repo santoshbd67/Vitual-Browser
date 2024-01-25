@@ -28,7 +28,7 @@ pipeline {
             steps {
                 script {
                     withDockerRegistry(credentialsId: 'dockerhub', toolName: 'docker') {
-                      dir('/home/azureuser/.jenkins/workspace/vir/.docker/google-chrome/Dockerfile') {
+                      dir('/home/azureuser/.jenkins/workspace/virtualbrowser/.docker/google-chrome') {
    			                 sh "docker build -t santoshbd67/chrome:latest ."
 			            }  
                     }
