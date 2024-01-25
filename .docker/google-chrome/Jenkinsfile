@@ -1,0 +1,58 @@
+pipeline {
+    agent any
+    environment{
+        SCANNER_HOME=tool 'sonar-scanner'
+    }
+
+    stages {
+        stage('Git checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/santoshbd67/Vitual-Browser.git'
+            }
+        }
+           stage('Dependency Check') {
+            steps {
+                dependencyCheck additionalArguments: ' --scan ./ --disableNodeAudit ', odcInstallation: 'DC'
+                    dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+            }
+        }
+          stage('Sonarqube') {
+            steps {
+                withSonarQubeEnv('sonar-server'){
+                   sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=vir \
+                   -Dsonar.projectKey=vir '''
+               }
+            }
+        }
+          stage('Docker build and Tag') {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'dockerhub', toolName: 'docker') {
+                      dir('/home/azureuser/.jenkins/workspace/vir/.docker/firefox') {
+   			                 sh "docker build -t santoshbd67/chrome:latest ."
+			            }  
+                    }
+                }
+            }
+        }
+         stage('Tivy Scan') {
+            steps {
+                sh "trivy image santoshbd67/chrome:latest"
+            }
+        }
+           stage('Docker push Tag') {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'dockerhub', toolName: 'docker') {
+                      sh "docker push santoshbd67/chrome:latest" 
+                    }
+                }
+            }
+        }
+        stage('Deploy') {
+            steps {
+                sh "docker-compose up -d"
+            }
+        }
+    }
+}
